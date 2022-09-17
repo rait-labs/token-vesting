@@ -328,7 +328,7 @@ fn main() {
                 Arg::with_name("source_owner")
                     .long("source_owner")
                     .value_name("KEYPAIR")
-                    .validator(is_keypair)
+                    
                     .takes_value(true)
                     .help(
                         "Specify the source account owner. \
@@ -450,7 +450,7 @@ fn main() {
                 Arg::with_name("payer")
                     .long("payer")
                     .value_name("KEYPAIR")
-                    .validator(is_keypair)
+                    
                     .takes_value(true)
                     .help(
                         "Specify the transaction fee payer account address. \
@@ -485,7 +485,7 @@ fn main() {
                 Arg::with_name("payer")
                     .long("payer")
                     .value_name("KEYPAIR")
-                    .validator(is_keypair)
+                    
                     .takes_value(true)
                     .help(
                         "Specify the transaction fee payer account address. \
@@ -509,7 +509,7 @@ fn main() {
                 Arg::with_name("current_destination_owner")
                     .long("current_destination_owner")
                     .value_name("KEYPAIR")
-                    .validator(is_keypair)
+                    
                     .takes_value(true)
                     .help(
                         "Specify the current destination owner account keypair. \
@@ -545,7 +545,7 @@ fn main() {
                 Arg::with_name("payer")
                     .long("payer")
                     .value_name("KEYPAIR")
-                    .validator(is_keypair)
+                    
                     .takes_value(true)
                     .help(
                         "Specify the transaction fee payer account address. \
