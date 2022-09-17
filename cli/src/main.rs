@@ -1,37 +1,39 @@
 extern crate core;
 
-use std::any::Any;
 use chrono::{DateTime, Duration};
-use clap::{crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand, ArgMatches};
+use clap::{
+    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, ArgMatches,
+    SubCommand,
+};
 use solana_clap_utils::{
     input_parsers::{keypair_of, pubkey_of, value_of, values_of},
     input_validators::{is_amount, is_keypair, is_parsable, is_pubkey, is_slot, is_url},
 };
 use solana_client::rpc_client::RpcClient;
 use solana_program::{msg, program_pack::Pack, pubkey::Pubkey, system_program, sysvar};
+use solana_remote_wallet::locator::Locator;
+use solana_remote_wallet::remote_keypair::generate_remote_keypair;
+use solana_remote_wallet::remote_wallet::maybe_wallet_manager;
+use solana_sdk::derivation_path::DerivationPath;
+use solana_sdk::signature::read_keypair_file;
 use solana_sdk::{
     self, commitment_config::CommitmentConfig, signature::Keypair, signature::Signer,
     transaction::Transaction,
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use spl_token;
+use std::any::Any;
 use std::convert::{TryFrom, TryInto};
-use solana_remote_wallet::locator::Locator;
-use solana_remote_wallet::remote_keypair::generate_remote_keypair;
-use solana_remote_wallet::remote_wallet::maybe_wallet_manager;
-use solana_sdk::derivation_path::DerivationPath;
-use solana_sdk::signature::read_keypair_file;
 use token_vesting::{
     instruction::{change_destination, create, init, unlock, Schedule},
     state::{unpack_schedules, VestingScheduleHeader},
 };
 use uriparse::URIReference;
 
-
 fn keypair_or_ledger_of(matches: &ArgMatches<'_>, name: &str) -> Option<Box<dyn Signer>> {
     if let Some(value) = matches.value_of(name) {
         let path = &*value;
-        return  if path.starts_with("usb://") {
+        return if path.starts_with("usb://") {
             let uri_invalid_msg =
                 "Failed to parse usb:// keypair path. It must be of the form 'usb://ledger?key=0'.";
             let uri_ref = URIReference::try_from(path).expect(uri_invalid_msg);
@@ -44,28 +46,28 @@ fn keypair_or_ledger_of(matches: &ArgMatches<'_>, name: &str) -> Option<Box<dyn 
                 .expect("Remote wallet found, but failed to establish protocol. Maybe the Solana app is not open.")
                 .expect("Failed to find a remote wallet, maybe Ledger is not connected or locked.");
 
-// When using a Ledger hardware wallet, confirm the public key of the
-// key to sign with on its display, so users can be sure that they
-// selected the right key.
+            // When using a Ledger hardware wallet, confirm the public key of the
+            // key to sign with on its display, so users can be sure that they
+            // selected the right key.
             let confirm_public_key = true;
 
-
-                Some(Box::new(generate_remote_keypair(
+            Some(Box::new(
+                generate_remote_keypair(
                     locator,
                     derivation_path,
                     &hw_wallet,
                     confirm_public_key,
                     "metaplex", /* When multiple wal
-                    lets are connected, used to display a hint */
-                ).expect("Failed to contact remote wallet")
-                ))
+                                lets are connected, used to display a hint */
+                )
+                .expect("Failed to contact remote wallet"),
+            ))
         } else {
             Some(Box::new(keypair_of(matches, name).unwrap()))
         };
     }
     None
 }
-
 
 // Lock the vesting contract
 fn command_create_svc(
@@ -112,7 +114,7 @@ fn command_create_svc(
             vesting_seed,
             schedules.len() as u32,
         )
-            .unwrap(),
+        .unwrap(),
         create_associated_token_account(
             &source_token_owner.pubkey(),
             &vesting_pubkey,
@@ -130,7 +132,7 @@ fn command_create_svc(
             schedules,
             vesting_seed,
         )
-            .unwrap(),
+        .unwrap(),
     ];
 
     let mut transaction = Transaction::new_with_payer(&instructions, Some(&payer.pubkey()));
@@ -184,7 +186,7 @@ fn command_unlock_svc(
         &destination_token_pubkey,
         vesting_seed,
     )
-        .unwrap();
+    .unwrap();
 
     let mut transaction = Transaction::new_with_payer(&[unlock_instruction], Some(&payer.pubkey()));
 
@@ -227,7 +229,7 @@ fn command_change_destination(
         &new_destination_token_account,
         vesting_seed,
     )
-        .unwrap();
+    .unwrap();
 
     let mut transaction = Transaction::new_with_payer(&[unlock_instruction], Some(&payer.pubkey()));
 
@@ -604,17 +606,17 @@ fn main() {
                 let start: u64 = DateTime::parse_from_rfc3339(
                     &value_of::<String>(arg_matches, "start-date-time").unwrap(),
                 )
-                    .unwrap()
-                    .timestamp()
-                    .try_into()
-                    .unwrap();
+                .unwrap()
+                .timestamp()
+                .try_into()
+                .unwrap();
                 let end: u64 = DateTime::parse_from_rfc3339(
                     &value_of::<String>(arg_matches, "end-date-time").unwrap(),
                 )
-                    .unwrap()
-                    .timestamp()
-                    .try_into()
-                    .unwrap();
+                .unwrap()
+                .timestamp()
+                .try_into()
+                .unwrap();
                 let total = schedule_amounts[0];
                 let part = (((total as u128) * (release_frequency as u128))
                     / ((end - start) as u128))
