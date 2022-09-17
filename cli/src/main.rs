@@ -28,40 +28,6 @@ use token_vesting::{
 use uriparse::URIReference;
 
 
-// fn get_signer_path_or_ledger(path: &str) -> Box<dyn Signer> {
-//     if path.starts_with("usb://") {
-//         let uri_invalid_msg =
-//             "Failed to parse usb:// keypair path. It must be of the form 'usb://ledger?key=0'.";
-//         let uri_ref = URIReference::try_from(path).expect(uri_invalid_msg);
-//         let derivation_path = DerivationPath::from_uri_key_query(&uri_ref)
-//             .expect(uri_invalid_msg)
-//             .unwrap_or_default();
-//         let locator = Locator::new_from_uri(&uri_ref).expect(uri_invalid_msg);
-//
-//         let hw_wallet = maybe_wallet_manager()
-//             .expect("Remote wallet found, but failed to establish protocol. Maybe the Solana app is not open.")
-//             .expect("Failed to find a remote wallet, maybe Ledger is not connected or locked.");
-//
-//         // When using a Ledger hardware wallet, confirm the public key of the
-//         // key to sign with on its display, so users can be sure that they
-//         // selected the right key.
-//         let confirm_public_key = true;
-//
-//         Box::new(
-//             generate_remote_keypair(
-//                 locator,
-//                 derivation_path,
-//                 &hw_wallet,
-//                 confirm_public_key,
-//                 "metaplex", /* When multiple wallets are connected, used to display a hint */
-//             )
-//                 .expect("Failed to contact remote wallet"),
-//         )
-//     } else {
-//         Box::new(read_keypair_file(path).unwrap())
-//     }
-// }
-
 fn keypair_or_ledger_of(matches: &ArgMatches<'_>, name: &str) -> Option<Box<dyn Signer>> {
     if let Some(value) = matches.value_of(name) {
         let path = &*value;
