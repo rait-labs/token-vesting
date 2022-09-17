@@ -138,7 +138,7 @@ fn command_create_svc(
     let mut transaction = Transaction::new_with_payer(&instructions, Some(&payer.pubkey()));
 
     let recent_blockhash = rpc_client.get_recent_blockhash().unwrap().0;
-    transaction.sign(&[&*payer], recent_blockhash);
+    transaction.sign(&[&*payer, &*source_token_owner], recent_blockhash);
 
     msg!(
         "\nThe seed of the contract is: {:?}",
