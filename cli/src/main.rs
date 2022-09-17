@@ -1,7 +1,8 @@
+extern crate core;
+
+use std::any::Any;
 use chrono::{DateTime, Duration};
-use clap::{
-    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
-};
+use clap::{crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand, ArgMatches};
 use solana_clap_utils::{
     input_parsers::{keypair_of, pubkey_of, value_of, values_of},
     input_validators::{is_amount, is_keypair, is_parsable, is_pubkey, is_slot, is_url},
@@ -14,18 +15,98 @@ use solana_sdk::{
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use spl_token;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
+use solana_remote_wallet::locator::Locator;
+use solana_remote_wallet::remote_keypair::generate_remote_keypair;
+use solana_remote_wallet::remote_wallet::maybe_wallet_manager;
+use solana_sdk::derivation_path::DerivationPath;
+use solana_sdk::signature::read_keypair_file;
 use token_vesting::{
     instruction::{change_destination, create, init, unlock, Schedule},
     state::{unpack_schedules, VestingScheduleHeader},
 };
+use uriparse::URIReference;
+
+
+// fn get_signer_path_or_ledger(path: &str) -> Box<dyn Signer> {
+//     if path.starts_with("usb://") {
+//         let uri_invalid_msg =
+//             "Failed to parse usb:// keypair path. It must be of the form 'usb://ledger?key=0'.";
+//         let uri_ref = URIReference::try_from(path).expect(uri_invalid_msg);
+//         let derivation_path = DerivationPath::from_uri_key_query(&uri_ref)
+//             .expect(uri_invalid_msg)
+//             .unwrap_or_default();
+//         let locator = Locator::new_from_uri(&uri_ref).expect(uri_invalid_msg);
+//
+//         let hw_wallet = maybe_wallet_manager()
+//             .expect("Remote wallet found, but failed to establish protocol. Maybe the Solana app is not open.")
+//             .expect("Failed to find a remote wallet, maybe Ledger is not connected or locked.");
+//
+//         // When using a Ledger hardware wallet, confirm the public key of the
+//         // key to sign with on its display, so users can be sure that they
+//         // selected the right key.
+//         let confirm_public_key = true;
+//
+//         Box::new(
+//             generate_remote_keypair(
+//                 locator,
+//                 derivation_path,
+//                 &hw_wallet,
+//                 confirm_public_key,
+//                 "metaplex", /* When multiple wallets are connected, used to display a hint */
+//             )
+//                 .expect("Failed to contact remote wallet"),
+//         )
+//     } else {
+//         Box::new(read_keypair_file(path).unwrap())
+//     }
+// }
+
+fn keypair_or_ledger_of(matches: &ArgMatches<'_>, name: &str) -> Option<Box<dyn Signer>> {
+    if let Some(value) = matches.value_of(name) {
+        let path = &*value;
+        return  if path.starts_with("usb://") {
+            let uri_invalid_msg =
+                "Failed to parse usb:// keypair path. It must be of the form 'usb://ledger?key=0'.";
+            let uri_ref = URIReference::try_from(path).expect(uri_invalid_msg);
+            let derivation_path = DerivationPath::from_uri_key_query(&uri_ref)
+                .expect(uri_invalid_msg)
+                .unwrap_or_default();
+            let locator = Locator::new_from_uri(&uri_ref).expect(uri_invalid_msg);
+
+            let hw_wallet = maybe_wallet_manager()
+                .expect("Remote wallet found, but failed to establish protocol. Maybe the Solana app is not open.")
+                .expect("Failed to find a remote wallet, maybe Ledger is not connected or locked.");
+
+// When using a Ledger hardware wallet, confirm the public key of the
+// key to sign with on its display, so users can be sure that they
+// selected the right key.
+            let confirm_public_key = true;
+
+
+                Some(Box::new(generate_remote_keypair(
+                    locator,
+                    derivation_path,
+                    &hw_wallet,
+                    confirm_public_key,
+                    "metaplex", /* When multiple wal
+                    lets are connected, used to display a hint */
+                ).expect("Failed to contact remote wallet")
+                ))
+        } else {
+            Some(Box::new(keypair_of(matches, name).unwrap()))
+        };
+    }
+    None
+}
+
 
 // Lock the vesting contract
 fn command_create_svc(
     rpc_client: RpcClient,
     program_id: Pubkey,
-    payer: Keypair,
-    source_token_owner: Keypair,
+    payer: Box<dyn Signer>,
+    source_token_owner: Box<dyn Signer>,
     possible_source_token_pubkey: Option<Pubkey>,
     destination_token_pubkey: Pubkey,
     mint_address: Pubkey,
@@ -65,7 +146,7 @@ fn command_create_svc(
             vesting_seed,
             schedules.len() as u32,
         )
-        .unwrap(),
+            .unwrap(),
         create_associated_token_account(
             &source_token_owner.pubkey(),
             &vesting_pubkey,
@@ -83,13 +164,13 @@ fn command_create_svc(
             schedules,
             vesting_seed,
         )
-        .unwrap(),
+            .unwrap(),
     ];
 
     let mut transaction = Transaction::new_with_payer(&instructions, Some(&payer.pubkey()));
 
     let recent_blockhash = rpc_client.get_recent_blockhash().unwrap().0;
-    transaction.sign(&[&payer], recent_blockhash);
+    transaction.sign(&[&*payer], recent_blockhash);
 
     msg!(
         "\nThe seed of the contract is: {:?}",
@@ -115,7 +196,7 @@ fn command_unlock_svc(
     rpc_client: RpcClient,
     program_id: Pubkey,
     vesting_seed: [u8; 32],
-    payer: Keypair,
+    payer: Box<dyn Signer>,
 ) {
     // Find the non reversible public key for the vesting contract via the seed
     let (vesting_pubkey, _) = Pubkey::find_program_address(&[&vesting_seed[..31]], &program_id);
@@ -137,12 +218,12 @@ fn command_unlock_svc(
         &destination_token_pubkey,
         vesting_seed,
     )
-    .unwrap();
+        .unwrap();
 
     let mut transaction = Transaction::new_with_payer(&[unlock_instruction], Some(&payer.pubkey()));
 
     let recent_blockhash = rpc_client.get_recent_blockhash().unwrap().0;
-    transaction.sign(&[&payer], recent_blockhash);
+    transaction.sign(&[&*payer], recent_blockhash);
 
     rpc_client.send_transaction(&transaction).unwrap();
 }
@@ -150,11 +231,11 @@ fn command_unlock_svc(
 fn command_change_destination(
     rpc_client: RpcClient,
     program_id: Pubkey,
-    destination_token_account_owner: Keypair,
+    destination_token_account_owner: Box<dyn Signer>,
     opt_new_destination_account: Option<Pubkey>,
     opt_new_destination_token_account: Option<Pubkey>,
     vesting_seed: [u8; 32],
-    payer: Keypair,
+    payer: Box<dyn Signer>,
 ) {
     // Find the non reversible public key for the vesting contract via the seed
     let (vesting_pubkey, _) = Pubkey::find_program_address(&[&vesting_seed[..31]], &program_id);
@@ -180,13 +261,13 @@ fn command_change_destination(
         &new_destination_token_account,
         vesting_seed,
     )
-    .unwrap();
+        .unwrap();
 
     let mut transaction = Transaction::new_with_payer(&[unlock_instruction], Some(&payer.pubkey()));
 
     let recent_blockhash = rpc_client.get_recent_blockhash().unwrap().0;
     transaction.sign(
-        &[&payer, &destination_token_account_owner],
+        &[&*payer, &*destination_token_account_owner],
         recent_blockhash,
     );
 
@@ -264,7 +345,7 @@ fn main() {
                     "Specify the address (public key) of the program.",
                 ),
         )
-        .subcommand(SubCommand::with_name("create").about("Create a new vesting contract with an optional release schedule")        
+        .subcommand(SubCommand::with_name("create").about("Create a new vesting contract with an optional release schedule")
             .arg(
                 Arg::with_name("mint_address")
                     .long("mint_address")
@@ -363,7 +444,7 @@ fn main() {
                     .long("release-frequency")
                     .value_name("RELEASE_FREQUENCY")
                     .takes_value(true)
-                    .conflicts_with("release-times")                                        
+                    .conflicts_with("release-times")
                     .help(
                         "Frequency of release amount. \
                         You start on 1sth of Nov and end on 5th of Nov. \
@@ -525,7 +606,7 @@ fn main() {
 
     let _ = match matches.subcommand() {
         ("create", Some(arg_matches)) => {
-            let source_keypair = keypair_of(arg_matches, "source_owner").unwrap();
+            let source_keypair = keypair_or_ledger_of(arg_matches, "source_owner").unwrap();
             let source_token_pubkey = pubkey_of(arg_matches, "source_token_address");
             let mint_address = pubkey_of(arg_matches, "mint_address").unwrap();
             let destination_pubkey = match pubkey_of(arg_matches, "destination_token_address") {
@@ -535,7 +616,7 @@ fn main() {
                 ),
                 Some(destination_token_pubkey) => destination_token_pubkey,
             };
-            let payer_keypair = keypair_of(arg_matches, "payer").unwrap();
+            let payer_keypair = keypair_or_ledger_of(arg_matches, "payer").unwrap();
 
             // Parsing schedules
             let mut schedule_amounts: Vec<u64> = values_of(arg_matches, "amounts").unwrap();
@@ -557,17 +638,17 @@ fn main() {
                 let start: u64 = DateTime::parse_from_rfc3339(
                     &value_of::<String>(arg_matches, "start-date-time").unwrap(),
                 )
-                .unwrap()
-                .timestamp()
-                .try_into()
-                .unwrap();
+                    .unwrap()
+                    .timestamp()
+                    .try_into()
+                    .unwrap();
                 let end: u64 = DateTime::parse_from_rfc3339(
                     &value_of::<String>(arg_matches, "end-date-time").unwrap(),
                 )
-                .unwrap()
-                .timestamp()
-                .try_into()
-                .unwrap();
+                    .unwrap()
+                    .timestamp()
+                    .try_into()
+                    .unwrap();
                 let total = schedule_amounts[0];
                 let part = (((total as u128) * (release_frequency as u128))
                     / ((end - start) as u128))
@@ -626,17 +707,17 @@ fn main() {
         ("unlock", Some(arg_matches)) => {
             // The seed is given in the format of a pubkey on the user side but it's handled as a [u8;32] in the program
             let vesting_seed = pubkey_of(arg_matches, "seed").unwrap().to_bytes();
-            let payer_keypair = keypair_of(arg_matches, "payer").unwrap();
+            let payer_keypair = keypair_or_ledger_of(arg_matches, "payer").unwrap();
             command_unlock_svc(rpc_client, program_id, vesting_seed, payer_keypair)
         }
         ("change-destination", Some(arg_matches)) => {
             let vesting_seed = pubkey_of(arg_matches, "seed").unwrap().to_bytes();
             let destination_account_owner =
-                keypair_of(arg_matches, "current_destination_owner").unwrap();
+                keypair_or_ledger_of(arg_matches, "current_destination_owner").unwrap();
             let opt_new_destination_account = pubkey_of(arg_matches, "new_destination_address");
             let opt_new_destination_token_account =
                 pubkey_of(arg_matches, "new_destination_token_address");
-            let payer_keypair = keypair_of(arg_matches, "payer").unwrap();
+            let payer_keypair = keypair_or_ledger_of(arg_matches, "payer").unwrap();
             command_change_destination(
                 rpc_client,
                 program_id,
