@@ -1,61 +1,24 @@
-import { FC, useCallback, useState, useEffect, useReducer } from "react";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
-import bs58 from "bs58";
-import { verify } from "@noble/ed25519";
-import { SignMessage } from "../../components/SignMessage";
-import { SendTransaction } from "../../components/SendTransaction";
-import { notify } from "../../utils/notifications";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import {
-  PublicKey,
   Connection,
+  PublicKey,
   SYSVAR_CLOCK_PUBKEY,
-  TransactionInstruction,
   Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
-import { WalletError } from "@solana/wallet-adapter-base";
+import bs58 from "bs58";
+import { FC, useCallback, useEffect, useReducer, useState } from "react";
+import { notify } from "../../utils/notifications";
 
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
+  toDateString,
+  toNumberString,
   vestingProgramId,
   wlknMint,
 } from "constants/common";
-import { ContractInfo, toDateString, toNumberString } from "./ContractInfo";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-
-export async function getContractInfo(
-  connection: Connection,
-  vestingAccountKey: PublicKey
-): Promise<ContractInfo> {
-  console.log("Fetching contract ", vestingAccountKey.toBase58());
-  const vestingInfo = await connection.getAccountInfo(
-    vestingAccountKey,
-    "single"
-  );
-  if (!vestingInfo) {
-    throw "Vesting contract account is unavailable";
-  }
-  const info = ContractInfo.fromBuffer(vestingInfo.data);
-  if (!info) {
-    throw "Vesting contract account is not initialized";
-  }
-  return info;
-}
-
-export async function findAssociatedTokenAddress(
-  walletAddress: PublicKey,
-  tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-  return (
-    await PublicKey.findProgramAddress(
-      [
-        walletAddress.toBuffer(),
-        TOKEN_PROGRAM_ID.toBuffer(),
-        tokenMintAddress.toBuffer(),
-      ],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )
-  )[0];
-}
+import { ContractInfo } from "../../constants/ContractInfo";
+import { findAssociatedTokenAddress } from "constants/vesting";
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -70,7 +33,7 @@ export const UnlockVestingView: FC = ({}) => {
   const { publicKey, signMessage, sendTransaction } = useWallet();
   const { connection } = useConnection();
   const [offer, setSeed] = useState<string>(
-    "111111152P2r5yt6odmBLPsFCLBrFisJ3aS7LqLEq"
+    "4T8A8NmumwSBWXrDfVphqdARAMsuVbv3PZPGwR4bHytG"
   );
   const initalDate = Date.now();
 
@@ -103,10 +66,7 @@ export const UnlockVestingView: FC = ({}) => {
         seedWord.toString("hex") + bump.toString(16),
         "hex"
       );
-      const vestingTokenAccountKey = await findAssociatedTokenAddress(
-        vestingAccountKey,
-        wlknMint
-      );
+
       const vestingInfo = await getContractInfo(connection, vestingAccountKey);
 
       setContractInfo(vestingInfo);
@@ -308,3 +268,22 @@ export const UnlockVestingView: FC = ({}) => {
     </div>
   );
 };
+
+export async function getContractInfo(
+  connection: Connection,
+  vestingAccountKey: PublicKey
+): Promise<ContractInfo> {
+  console.log("Fetching contract ", vestingAccountKey.toBase58());
+  const vestingInfo = await connection.getAccountInfo(
+    vestingAccountKey,
+    "single"
+  );
+  if (!vestingInfo) {
+    throw "Vesting contract account is unavailable";
+  }
+  const info = ContractInfo.fromBuffer(vestingInfo.data);
+  if (!info) {
+    throw "Vesting contract account is not initialized";
+  }
+  return info;
+}

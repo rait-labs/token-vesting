@@ -1,6 +1,9 @@
 module.exports = {
   mode: "jit",
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+    "./node_modules/tailwind-datepicker-react/dist/**/*.js", // <--- Add this line
+  ],
   darkMode: "media",
   theme: {
     extend: {},

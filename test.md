@@ -213,3 +213,36 @@ create                                                          \
 --verbose | bash
 
 The seed of the contract is: 11111114d3RrygbPdAtMuFnDmzsN8T5fYKVQ7FVvV
+
+
+echo "RUST_BACKTRACE=1 ./target/debug/vesting-contract-cli      \
+--url https://api.devnet.solana.com                             \
+--program_id 6v1e8QJUcQZ9AzGND8denhPtJPwhJbGpP4rsUivC4Kqm                                        \
+create                                                          \
+--mint_address 2caZBEnWSjxMnDmtMWQVkr8mJTibsXEomRNAtQg98Une                                            \
+--source_owner ~/.config/solana/id_owner.json                   \
+--source_token_address C7oQjNLggVVttvkutgaivWuPqmYKoFfVSzoFSxxkFJzD                    \
+--destination_token_address APVyauiWahV6tPojkStQ7RSTZiJzSLrmGEGAEGRvEpMe                 \
+--amounts 4200000,!                                                  \
+--release-frequency 'P1M'                                       \
+--start-date-time '2023-01-06T20:11:18Z'                        \
+--end-date-time '2023-12-06T20:11:19Z'                          \
+--payer ~/.config/solana/id_owner.json"                         \
+--verbose | bash 
+
+//! release-frequency-> Parse ISO8601 duration format.
+
+echo "RUST_BACKTRACE=1 ./target/debug/vesting-contract-cli      \
+--url https://api.devnet.solana.com                             \
+--program_id 6v1e8QJUcQZ9AzGND8denhPtJPwhJbGpP4rsUivC4Kqm                                        \
+create                                                          \
+--mint_address 2caZBEnWSjxMnDmtMWQVkr8mJTibsXEomRNAtQg98Une                                            \
+--source_owner ~/.config/solana/id_owner.json                   \
+--source_token_address C7oQjNLggVVttvkutgaivWuPqmYKoFfVSzoFSxxkFJzD                    \
+--destination_address HUd8g5i4UhWSESbJ6WiDZs2FTo7fQ4jUbP3aHj4LxbkL                 \
+--amounts 4200000,!                                                  \
+--release-frequency 'P1M'                                       \
+--start-date-time '2023-01-06T20:11:18Z'                        \
+--end-date-time '2023-12-06T20:11:19Z'                          \
+--payer ~/.config/solana/id_owner.json"                         \
+--verbose | bash 
