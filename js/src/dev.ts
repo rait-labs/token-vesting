@@ -17,7 +17,7 @@ import { create, TOKEN_VESTING_PROGRAM_ID } from './main';
  */
 
 /** Path to your wallet */
-const WALLET_PATH = '';
+const WALLET_PATH = '~/.config/solana/id_owner.json';
 const wallet = Keypair.fromSecretKey(
   new Uint8Array(JSON.parse(fs.readFileSync(WALLET_PATH).toString())),
 );

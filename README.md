@@ -32,7 +32,7 @@
 <h2 align="center">Program ID</h2>
 <br />
 
-- mainnet: `CChTq6PthWU82YZkbveA3WDf7s97BWhBK4Vx9bmsT743`
+- mainnet: `6v1e8QJUcQZ9AzGND8denhPtJPwhJbGpP4rsUivC4Kqm`
 - devnet: `DLxB9dSQtA4WJ49hWFhxqiQkD9v6m67Yfk9voxpxrBs4`
 
 <br />
@@ -49,7 +49,7 @@ This code has been audited by Kudelski ✅
 <h2 align="center">UI</h2>
 <br />
 
-The [Bonfida Token Vesting UI](https://vesting.bonfida.com) can be used to unlock tokens. The UI **only** works for vesting accounts using the mainnet deployment `CChTq6PthWU82YZkbveA3WDf7s97BWhBK4Vx9bmsT743`
+The [Bonfida Token Vesting UI](https://vesting.bonfida.com) can be used to unlock tokens. The UI **only** works for vesting accounts using the mainnet deployment `6v1e8QJUcQZ9AzGND8denhPtJPwhJbGpP4rsUivC4Kqm`
 
 <br />
 <a name="overview"></a>

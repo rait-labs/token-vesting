@@ -1,10 +1,10 @@
 {
-  "name": "@bonfida/token-vesting",
+  "name": "@noxal/token-vesting",
   "version": "0.0.8",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bonfida/token-vesting"
+    "url": "https://github.com/noxal/token-vesting"
   },
   "publishConfig": {
     "access": "public"

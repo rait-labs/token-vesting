@@ -22,7 +22,7 @@ import { assert } from 'console';
 import bs58 from 'bs58';
 
 export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
-  'CChTq6PthWU82YZkbveA3WDf7s97BWhBK4Vx9bmsT743',
+  '6v1e8QJUcQZ9AzGND8denhPtJPwhJbGpP4rsUivC4Kqm',
 );
 
 export async function create(
