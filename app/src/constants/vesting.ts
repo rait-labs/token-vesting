@@ -37,7 +37,6 @@ export function createInitInstruction(
   let buffers = [
     Buffer.from(Int8Array.from([0]).buffer),
     Buffer.concat(seeds),
-    // @ts-ignore
     new Numberu32(numberOfSchedules).toBuffer(),
   ];
 

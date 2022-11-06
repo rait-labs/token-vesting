@@ -10,7 +10,11 @@ import bs58 from "bs58";
 import { FC, useCallback, useEffect, useReducer, useState } from "react";
 import { notify } from "../../utils/notifications";
 
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   toDateString,
   toNumberString,
@@ -148,7 +152,31 @@ export const UnlockVestingView: FC = ({}) => {
         data,
       });
 
+      const associatedAddress = await Token.getAssociatedTokenAddress(
+        ASSOCIATED_TOKEN_PROGRAM_ID,
+        TOKEN_PROGRAM_ID,
+        wlknMint,
+        publicKey
+      );
+
+      const associatedAddressIx =
+        await Token.createAssociatedTokenAccountInstruction(
+          ASSOCIATED_TOKEN_PROGRAM_ID,
+          TOKEN_PROGRAM_ID,
+          wlknMint,
+          associatedAddress,
+          publicKey,
+          publicKey
+        );
+
       const transaction = new Transaction();
+      transaction.feePayer = publicKey;
+
+      const check_existing = await connection.getAccountInfo(associatedAddress);
+      console.log("check_existing: ", check_existing);
+      if (!check_existing) {
+        transaction.add(associatedAddressIx);
+      }
 
       const signature = await sendTransaction(
         transaction.add(transactionIns),
